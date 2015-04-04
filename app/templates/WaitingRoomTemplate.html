@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>PHASE Waiting Room</title>
+
+
+    <link rel="icon" href="../../favicon.ico">
+
+    <!-- Bootstrap core CSS -->
+    <link href="./app/static/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Custom styles for this template -->
+    <link href="starter-template.css" rel="stylesheet">
+    
+</head>
+
+<body>
+    <table>
+        <tr>
+            <img src="./app/static/AegisLogo.png" style="float: left;" />
+            <h2>Patient Waiting Room Screen</h2>
+        </tr>
+        <tr>
+            {% if patientChartId %}
+              <h1>Patient #{{ patientChartId }} is ready to be seen</h1>
+            {% else %}
+              <h1>Error, no Patient Chart Id was given. Please contact I.T.</h1>
+            {% endif %}
+
+        </tr>
+    </table>
+
+
+
+    <!-- Bootstrap core JavaScript
+     Placed at the end of the document so the pages load faster -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+    <script src="./app/static/bootstrap/dist/js/bootstrap.min.js"></script>
+</body>
+</html>
+
+
+

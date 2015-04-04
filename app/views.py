@@ -21,7 +21,7 @@ def ConstructWaitingRoomHTML(htmlText, filename):
 def TestPlaySound():
     # Play some sound if this page is visited
     pygame.mixer.init()
-    pygame.mixer.music.load("OOT_Secret.wav")
+    pygame.mixer.music.load("./app/static/OOT_Secret.wav")
     pygame.mixer.music.play()
     while pygame.mixer.music.get_busy() == True:
         continue
@@ -36,11 +36,10 @@ def NotifyWaitingRoom(patientChartId):
     if request.method == 'POST' and patientChartId:
         # Play some sound if this page is visited
         pygame.mixer.init()
-        pygame.mixer.music.load("OOT_Secret.wav")
+        pygame.mixer.music.load("./app/static/OOT_Secret.wav")
         pygame.mixer.music.play()
         while pygame.mixer.music.get_busy() == True:
             continue
-        
 
         # First, let's render the HTML Template we have for the
         # Waiting Room html page.
