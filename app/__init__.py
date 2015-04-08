@@ -21,4 +21,4 @@ for child in healthRoot:
     healthcareList.append(child.text)
 
 app = Flask(__name__)
-from app import views
+from app import webservice
