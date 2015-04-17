@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>PHASE Waiting Room</title>
+    
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=1" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <link rel="icon" href="../../favicon.ico">
+</head>
+
+<body>
+    <div id="divLogoAndWindowQueue" style="width:100%; min-height:50px; background-color:White; overflow:auto; " >
+        <div style="float: left; height: 100%; width: auto;">
+            <img src="./app/static/AegisLogo.png" />
+        </div>
+        <div style="float: left; height: 100%;">
+            <div style="float: left; margin: 10px;">
+                <h2>Window 1</h2>
+                <div> 
+                    <ol> 
+                        <li id='liWindow1Item1'>
+                        <li id='liWindow1Item2'>
+                        <li id='liWindow1Item3'>
+                    </ol>
+                </div>
+            </div>
+            <div style="float: left ;margin: 10px;">
+                 <h2>Window 2</h2>
+                 <div> 
+                    <ol> 
+                        <li id='liWindow2Item1'>
+                        <li id='liWindow2Item2'>
+                        <li id='liWindow2Item3'>
+                    </ol>
+                 </div>
+            </div>
+        </div>
+    </div>
+
+    
+    <form >
+    <asp:ScriptManager  ID="scriptManager" EnablePageMethods="true" />
+    <div id="divError" style="display:none; width: 100%; min-height: 100px; text-align: center; background-color:Red; color: white; font-weight: bold;  font-size: 60px;">No Clinic Indicated</div>
+    <iframe  id="ifWeather" style="display:none; border: 0; ">Your browser doesn't support iFrames.</iframe>
+    <iframe  id="ifNews" style="display:none; border: 0; ">Your browser doesn't support iFrames.</iframe>
+    
+    <div id="divFact" style="width: 100%; min-height: 700px; text-align: center ">
+            <div id="divFactType"  style="min-height: 150px; width: 100%; text-align: center; padding-top: 20px;  font-size: 60px; font-weight: 700; color: #003E55"></div>
+            <div id="divFactText"   style="min-height: 450px; width: 90%; margin: auto; text-align: center;  padding-top: 30px;  font-size: 50px"></div>
+    </div>
+    <div id="divPatient" style="display:none; background-color: White; text-align: center; font-size: 225px; padding-top: 100px; height: 500px; width: 800px; margin-left: -400px;  margin-top: -175px;  position: fixed; top: 50%; left: 50%; border: solid 1px gray">Now Serving</div>
+    <div id="divMessage" style="display:none; background-color: White; text-align: left; font-size: 50px; padding-top: 50px; height: 500px; width: 800px; margin-left: -400px;  margin-top: -175px;  position: fixed; top: 50%; left: 50%; border: solid 1px gray"></div>
+    </form>
+
+    <div >
+        <audio style="display:none;" id="audioTag" preload="true" controls="true" poster>
+            <source src="./app/static/OOT_Secret.wav">
+        </audio>
+    </div>
+
+<script type="text/javascript" language="javascript">
+
+    // Get the passed in Template Dict object
+    var templateDict = {{ templateDict|safe }};
+    
+    var patientChartId = templateDict["PatientChartId"]; 
+    var facilityName = templateDict["FacilityName"];
+    var generalFactsList = JSON.parse(templateDict["GeneralFactsList"]);
+    var healthcareFactsList = JSON.parse(templateDict["HealthcareFactsList"]);
+    var currentWindowsQueueDict = JSON.parse(templateDict["WindowsQueue"]);
+    var notificationMessage = templateDict["NotificationMessage"];
+
+    var refreshActionType = ''; // Default to no previous action
+    facilityName = facilityName.replace('21',''); // Replace "BF21" as "BF"
+
+    // Set document lengths
+    var height = document.documentElement.clientHeight ;
+    var width = document.documentElement.clientWidth ;
+    document.getElementById('ifWeather').height = height + 'px';
+    document.getElementById('ifWeather').width = width + 'px';
+    document.getElementById('ifNews').height = height + 'px';
+    document.getElementById('ifNews').width = width + 'px';
+    document.getElementById('divPatient').style.top = '300px';
+  
+    // Load in the queue for each Window (only window 1 & 2)
+    loadWindowQueues() 
+
+    // Show patient chart ID on the screen if it was passed in
+    // or a message if given
+    if (patientChartId)
+        showPatient(patientChartId);
+    else if (notificationMessage)
+        showMessage(notificationMessage);
+    else
+        hidePatient();
+
+    //rotate what we show every 20 seconds
+    setInterval(refreshSomething, 20000);
+
+    function showPatient(patientId) {
+        divPatient.innerHTML = patientId;
+        divPatient.style.display = "block";
+        
+        // Hide the patient in 10 secs after showing them
+        setTimeout(hidePatient, 10000);
+        __playSound('OOT_Secret.wav"');
+    }
+    
+    function showMessage(notificationMessage) {
+        divMessage.innerHTML = notificationMessage;
+        divMessage.style.display = "block";
+
+        // Hide the message in 40 secs after showing them
+        setTimeout(hideMessage, 40000);
+        _playSound('OOT_Secret.wav');
+    }
+
+    function hidePatient() {
+        divPatient.style.display = "none";
+    }
+
+    function hideMessage() {
+        divMessage.style.display = "none";
+    }
+
+    function loadWindowQueues() {
+        // Function takes each window's queue and adds each patient
+        // ID in the queue based on position
+        var window1Queue = currentWindowsQueueDict.WindowQueue1;
+        var window2Queue = currentWindowsQueueDict.WindowQueue2;
+
+        if (window1Queue["1"]) {
+            liWindow1Item1.textContent = window1Queue["1"].ID; 
+            alert(new Date(window1Queue["1"].ExpirationTime * 1000) + "");
+            var a = new Date(window1Queue["1"].ExpirationTime * 1000).getTime();
+
+        }
+        if (window1Queue["2"])
+            liWindow1Item2.textContent = window1Queue["2"].ID; 
+        if (window1Queue["3"])
+            liWindow1Item3.textContent = window1Queue["3"].ID;
+   
+        if (window2Queue["1"])
+            liWindow2Item1.textContent = window2Queue["1"].ID; 
+        if (window2Queue["2"])
+            liWindow2Item2.textContent = window2Queue["2"].ID; 
+        if (window2Queue["3"])
+            liWindow2Item3.textContent = window2Queue["3"].ID;
+    }
+
+
+    function refreshSomething() {
+        //only call a refresh if a patient is not being shown right
+        if (divPatient.style.display == "none" && divMessage.style.display == "none") {
+            var d = Math.floor((Math.random() * 10) + 8);
+            if (d < 3)
+                refreshWeather();
+            else if (d >= 3  && d <= 6)
+                refreshNews();
+            else
+                refreshFacts();
+                //PageMethods.GetRandomFact(refreshFacts_Success, refreshFacts_Failure);
+        }
+    }
+
+    function refreshFacts() {
+        // Show a random Fact either general or healthcare fact
+        var factTypeAndText = "";
+        if (Math.random() > 0.5)
+        {
+            // General fact - Get a random fact from the list
+            factTypeAndText = "Fun Fact|";
+            var fact = generalFactsList[Math.floor((Math.random() * generalFactsList.length))];
+            factTypeAndText += fact;
+        } 
+        else
+        {
+            // Healthcare fact - Get a random fact from the list
+            factTypeAndText = "Healthcare Fact|";
+            var fact = healthcareFactsList[Math.floor((Math.random() * healthcareFactsList.length))];
+            factTypeAndText += fact;
+        }
+
+        // Then, on completion of geting Facts, load them in
+        refreshFacts_Success(factTypeAndText, null, null)
+    }
+
+    function refreshFacts_Success(result, userContext, methodName) {
+        if (result.length > 0) {
+            if (refreshActionType != 'fact') {
+                // Set to Fact type
+                refreshActionType = 'fact';
+                document.getElementById('ifWeather').style.display = "none";
+                document.getElementById('ifNews').style.display = "none";
+                document.getElementById('divFact').style.display = "block";
+            }
+             
+            // Display the fact data
+            var split = result.split('|');
+            divFactType.textContent = split[0];
+            divFactText.textContent = split[1];
+        }
+    }
+
+    function refreshWeather() {
+        if (refreshActionType != 'weather') {
+            // Refresh the weather
+            refreshActionType = 'weather';
+            document.getElementById('divFact').style.display = "none";
+            document.getElementById('ifNews').style.display = "none";
+            document.getElementById('ifWeather').style.display = "block";
+            
+            if (!document.getElementById('ifWeather').src) {
+                // Load in the weather
+                var url = "http://www.wunderground.com/cgi-bin/findweather/getForecast"
+                    + "?brand=wxmap&zoom=8&query=" + facilityName + ",California";
+                document.getElementById('ifWeather').src = url;
+            }
+       }
+    }
+
+    function refreshNews() {
+        if (refreshActionType != 'news') {
+            // Refresh the news
+            refreshActionType = 'news';
+            document.getElementById('divFact').style.display = "none";
+            document.getElementById('ifWeather').style.display = "none";
+            document.getElementById('ifNews').style.display = "block";
+
+            if (!document.getElementById('ifWeather').src) {
+                // Load in the News
+                var url = "http://us.cnn.com/?hpt=ed_US";
+                document.getElementById('ifNews').src = url;
+            }
+        }
+    }
+
+    function refreshFacts_Failure(result, userContext, methodName) {
+    }
+
+    function __playSound(which) {
+            var audioEl = document.getElementById("audioTag");
+
+            audioEl.load();
+            audioEl.play();
+    }
+
+    </script>
+</body>
+</html>
+
+
+
