@@ -1,0 +1,4 @@
+[Desktop Entry]
+Type=Application
+Name=Waiting Room App Autostart
+Exec=/home/odroid/WaitingRoomApp/WaitingRoomApp/autostart_waiting_room_app.sh

@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>PHASE Waiting Room</title>
+    
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=1" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+</head>
+
+<body style="background-color: #FFFFFF;">
+    <div id="divWindows" style="margin-top:10px; top:50%; background-color: #FFFFFF; "></div>
+    <div id="divTicker" style='margin-top:20px; top:50%; background-color: #FFFFFF; font-family: Lucida Grande, sans-serif; border-top: 1px solid #1C94C4; padding-top: 10px; '></div>
+    <iframe id="ifWeather" style="margin-top:20px; top:50%; background-color: #FFFFFF; font-family: Lucida Grande, sans-serif;">Your browser doesn't support iFrames.</iframe>
+   
+    <div>
+        <audio style="display:none;" id="audioTag" preload="true" controls="true" poster>
+            <source src='{{ WaitingRoomAudioPath }}'>
+        </audio>
+    </div>
+
+</body>
+
+<script type="text/javascript" language="javascript" src='{{ JQueryFilePath }}'></script>
+<script type="text/javascript" language="javascript">
+
+$( document ).ready(function() {
+    // Document is ready to use JS
+    // Get the passed in Template Dict object
+    var templateDict = {{ templateDict|safe }};
+
+    var numberOfWindows = templateDict["NumberOfWindows"];
+    var windowsList = JSON.parse(templateDict["WindowsList"]);
+    var tickerItem = JSON.parse(templateDict["Ticker"]);
+    var isWindowCalled = JSON.parse(templateDict["IsWindowCalled"]);
+    // Set document lengths
+    var height = document.documentElement.clientHeight;
+    var width = document.documentElement.clientWidth;
+
+    document.getElementById('divWindows').style.width = (width-10) + 'px';
+    document.getElementById('divWindows').style.height = ((height/2) + 30) + 'px';
+
+    document.getElementById('ifWeather').style.width = (width-20) + 'px';
+    document.getElementById('ifWeather').style.height = ((height/3) + 40) + 'px';
+    
+    document.getElementById('divTicker').style.width = (width-20) + 'px';
+    document.getElementById('divTicker').style.height = ((height/3) + 5) + 'px';
+    
+    // Now set up some stuff
+    // Generate divs for each window (based on # of windows)
+    generateWindowDivs();
+
+    // Load in the queue for each Window
+    loadWindowQueues();
+    
+    if (isTickerValid())
+        loadTicker(); //load the current ticker
+    else
+        refreshTicker(); //refresh the ticker  
+
+    // Functions
+    function isTickerValid() {
+        // Check if the ticker is valid
+        // and not expired
+        
+        // Check if ticker exists
+        if (!tickerItem.Text || !tickerItem.Type || !tickerItem.ExpirationTime)
+            return false;
+        
+        var currentTime = new Date();
+        var expTime = new Date(tickerItem.ExpirationTime * 1000).getTime();
+        
+        var expirationTime = Math.round(expTime - currentTime.getTime()); 
+
+        // Check if ticker has expired
+        if (expirationTime <= 0)
+            return false;
+
+        return true; //otherwise, valid
+    }
+
+
+    function generateWindowDivs() {
+        // Create divs based on the number
+        // of windows the clinic has
+        
+        // Determine the suitable font size (based on # of windows & width of screen)
+        // Note, window width should be ~1900 for a good monitor size
+        var divWindowWidth = Math.floor(width/numberOfWindows);
+        var divWindowFontSize;
+        if (divWindowWidth >= 1900)
+            divWindowFontSize = 160; // One Window
+        else if (divWindowWidth >= 900)
+            divWindowFontSize = 150; // Two Windows
+        else if (divWindowWidth >= 600)
+            divWindowFontSize = 100; // Three Windows
+        else
+            divWindowFontSize = 50; // Default-Special case
+        //alert(divWindowWidth);
+        for (i=1; i<=numberOfWindows; i++) {
+            // Create each window's div section
+            var div = document.createElement('div');
+            div.id = 'divWindow' + i;
+            div.style.fontSize = divWindowFontSize + "px";
+            div.style.height = Math.floor(height/2) + "px";
+            div.style.width = (Math.floor(width/numberOfWindows) - 20) + "px";
+            div.style.cssFloat = "left";
+            div.style.backgroundColor = "#FFFFFF";
+            div.style.textAlign = "center";
+            div.style.paddingTop = "50px";
+            div.style.paddingLeft = "10px";
+            div.style.top = "50%";
+            div.style.left = "50%";
+            div.style.color = "#1C94C4";
+            div.style.fontFamily = "Lucida Granda, sans-serif";
+            div.style.borderRight = "1px solid";
+            div.innerHTML = "WINDOW " + i;
+           
+            // append it to the div location for all windows
+            document.getElementById('divWindows').appendChild(div);
+        }
+    }
+
+    function setExpirationForWindow(windowDiv, expirationTime) {
+        setTimeout(function () {
+            // Remove the patient id from the div
+                windowDiv.innerHTML = windowDiv.innerHTML.split("<br>")[0];},
+            expirationTime);
+    }
+
+    function setExpirationForTicker(expirationTime) {
+        // Function sets a timeout for the ticker, calling the
+        // refresh on expiration & clearing the div's text
+        setTimeout(function () {
+                refreshTicker();
+                },
+            expirationTime);
+    }
+
+    function loadWindowQueues() {
+        // Load in any patients already on a window
+
+        // If there's a current window called, play the audio
+        if (isWindowCalled)
+            __playSound();
+        
+        var currentTime;
+        var windowFontSize;
+        var divWindowWidth = Math.floor(width/numberOfWindows);
+        
+        // Determine the font size based on the div window's width
+        if (divWindowWidth >= 1900)
+            windowFontSize = 285; // One Window
+        else if (divWindowWidth >= 900)
+            windowFontSize = 265; // Two Windows
+        else if (divWindowWidth >= 600)
+            windowFontSize = 175; // Three Windows
+        else
+            windowFontSize = 150; // Default-Special case
+
+        for (i=0; i<windowsList.length; i++)
+        {
+            if (windowsList[i] != null)
+            {
+                // This window isn't null, show the patient on this window
+                currentTime = new Date().getTime(); // Current time
+                var windowDiv = document.getElementById('divWindow' + windowsList[i].WindowNumber.toString());
+
+                windowDiv.innerHTML += "<br /><div style='font-family: Lucida Grande, sans-serif;"
+                    + "font-size: " + windowFontSize + "px; color:#000000;'>" + windowsList[i].ID + "</div>";
+
+                var expTime = new Date(windowsList[i].ExpirationTime * 1000).getTime();
+                var expirationTime = Math.round(expTime - currentTime); // expiration in secs
+
+                // Call funct with list item to clear on expiration
+                // We have to do this in order to preserve the 'windowDiv' var for each instance of the exp.
+                setExpirationForWindow(windowDiv, expirationTime);
+            }
+        }
+    }
+
+    function loadTicker() {
+        // Function loads the ticker item
+
+        // Get the expiration time in secs from now
+        var currentTime = new Date();
+        var expTime = new Date(tickerItem.ExpirationTime * 1000).getTime();
+        
+        var expirationTime = Math.round(expTime - currentTime.getTime()); 
+
+
+        // Show the weather or else, show the ticker item's text
+        if (tickerItem.Type == 'Weather')
+        {
+            // Check if the weather is not already showing (no need to refresh)
+            if (ifWeather.style.display != "block")
+                ifWeather.src = tickerItem.Text; //Sent the url link in the text
+
+            ifWeather.style.display = "block";
+            divTicker.style.display = "none";
+        }
+        else
+        {
+            // Display ticker text, fitting in into the ticker div
+
+            // Determine the length of the ticker item to display
+            var tickerTextString = new String(tickerItem.Text.toString());
+            var tickerTextLength = tickerTextString.length;
+            var fontSize;
+            if (tickerTextLength > 200)
+                fontSize = 30;
+            else if (tickerTextLength > 100)
+                fontSize = 40;
+            else
+                fontSize = 50;
+            // Hide weather iframe, show ticker
+            ifWeather.style.display = "none";
+            divTicker.style.display = "block";
+
+            // Show the ticker item
+            divTicker.style.fontSize = fontSize + "px";
+            divTicker.innerHTML = tickerTextString;
+        }
+
+        // Set expiration timeout
+        setExpirationForTicker(expirationTime); 
+    }
+    
+    function refreshTicker() {
+        // Will refresh the ticker
+        // Show weather, news, or facts
+        var d = Math.floor(Math.random() * 100);
+        if (d <= 25)
+            refresh('Fact');
+        else if (d > 25 && d <= 50)
+            refresh('News');
+        else if (d > 50 && d <= 75)
+            refresh('Message');
+        else
+            refresh('Weather');
+    }
+
+
+    function refresh(tickerType) {
+        // Function gets a new ticker item based on the type (fact, news, weather, etc.)
+        $.ajax({
+            type: "GET",
+            url: "http://localhost:5000/WaitingRoom/GetTicker/" + tickerType,
+            contentType: "application/json; charset=utf-8",
+            crossDomain:true,
+            success: function (data, text) {
+                // On a success, returns a JSON object for the ticker
+                // with a type, text, and expiration
+                var newTicker = JSON.parse(data); //json string to json obj
+
+                // Get the expiration time in secs from now
+                var currentTime = new Date();
+                var expTime = new Date(newTicker.ExpirationTime * 1000).getTime();
+                
+                var expirationTime = Math.round(expTime - currentTime.getTime()); 
+
+                if (newTicker.Type == 'Weather')
+                {
+                    // Check if the weather is not already showing (no need to refresh)
+                    if (ifWeather.style.display != "block")
+                        ifWeather.src = newTicker.Text; //Sent the url link in the text
+                    
+                    divTicker.style.display = "none";
+                    ifWeather.style.display = "block";
+                }
+                else
+                {
+                    // Else, display the tinker text as regular
+                    // Determine the length of the ticker item to display
+                    var tickerTextString = new String(newTicker.Text.toString());
+                    var tickerTextLength = tickerTextString.length;
+                    var fontSize;
+                    if (tickerTextLength > 200)
+                        fontSize = 30;
+                    else if (tickerTextLength > 100)
+                        fontSize = 40;
+                    else
+                        fontSize = 50;
+
+                    // Hide weather iframe
+                    ifWeather.style.display = "none";
+                    divTicker.style.display = "block";
+                    // Show the ticker item
+                    divTicker.style.fontSize = fontSize + "px";
+                    document.getElementById('divTicker').style.fontSize = fontSize + "px";
+                    divTicker.innerHTML = tickerTextString;
+                }
+
+                // Set expiration timeout
+                setExpirationForTicker(expirationTime); 
+            },
+            error: function (request, status, error) {
+                // There was an error trying to send the HTTP Request, so gracefully
+                // fail (don't display any error messages)                
+                // Set expiration for the ticker -- Refresh the ticker in 30 seconds
+                setExpirationForTicker(30000); 
+            }
+        });
+    }
+
+    function displayOneTimeMessage() {
+        // Handles displaying the one time message for the duration
+        // and then refreshing the ticker once the duration has finished
+
+        // Get the expiration time in secs from now
+        var currentTime = new Date();
+        var expTime = new Date(notificationExpirationTime * 1000).getTime();
+        var curTime = currentTime.getTime(); 
+        var expirationTime = Math.round(expTime - curTime); 
+
+
+        // Display news post, fitting in into the ticker div
+        // "if I fits, I sits"
+        var fontSize;
+        if (notificationMessage.length > 200)
+            fontSize = 30;
+        else if (notificationMessage.length > 100)
+            fontSize = 40;
+        else
+            fontSize = 50;
+
+        // Show the news item
+        divTicker.style.fontSize = fontSize + "px";
+        document.getElementById('divTicker').style.fontSize = fontSize + "px";
+        divTicker.innerHTML = notificationMessage;
+        // Set expiration timeout
+        setTimeout(function () {refreshTicker();}, expirationTime);
+    }
+
+
+    function __playSound() {
+            var audioEl = document.getElementById("audioTag");
+
+            audioEl.load();
+            audioEl.play();
+    }
+
+});
+    </script>
+</html>
+
+
+

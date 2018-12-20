@@ -1,0 +1,13 @@
+[Unit]
+Description=VNC Server for X11
+Requires=lightdm.service
+After=ligthdm.service
+
+[Service]
+Type=forking
+ExecStart=/usr/bin/x11vnc -forever -bg -geometry 1024x768 -usepw -shared -noprimary \
+   -auth /var/run/lightdm/root/:0 -display WAIT:0 -rfbauth /etc/x11vnc.pass \
+   -avahi -env X11VNC_AVAHI_NAME="`hostname`" -desktop "`hostname`'s Remote Desktop"
+
+[Install]
+WantedBy=graphical.target
